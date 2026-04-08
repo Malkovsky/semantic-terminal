@@ -1,8 +1,7 @@
-# sem
+# Semantic terminal
 
 [![PyPI](https://img.shields.io/pypi/v/semantic-terminal?color=blue&label=pypi)](https://pypi.org/project/semantic-terminal/)
-[![Python](https://img.shields.io/pypi/pyversions/semantic-terminal)](https://pypi.org/project/semantic-terminal/)
-[![~560 lines of code](https://img.shields.io/badge/lines%20of%20code-~560-brightgreen)](#project-structure)
+[![Lines of Code](https://tokei.rs/b1/github/Malkovsky/semantic-terminal?category=code)](https://github.com/Malkovsky/semantic-terminal)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 A single-purpose command-line tool in the Unix tradition: it does one thing and does it well. `sem` translates natural language into shell commands using AI.
@@ -12,7 +11,7 @@ Just like `grep` searches, `sed` edits, and `awk` processes text, `sem` translat
 ## Install
 
 ```
-pip install -e .
+pip install semantic-terminal
 ```
 
 Requires Python 3.10+.

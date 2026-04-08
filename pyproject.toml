@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic-terminal"
+version = "1.0.0"
+description = "Convert natural language descriptions into terminal commands using AI"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.0.0",
+]
+
+[project.scripts]
+sem = "semantic_terminal.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["semantic_terminal*"]

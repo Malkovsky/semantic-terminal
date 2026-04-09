@@ -18,7 +18,7 @@ jobs:
       - name: Count lines of code
         id: loc
         run: |
-          LOC=$(find semantic_terminal -name '*.py' -exec cat {} + | grep -cve '^\s*$' -e '^\s*#')
+          LOC=$(find semantic_terminal -name '*.py' -exec cat {} + | grep -cve '^[[:space:]]*$' -e '^[[:space:]]*#')
           echo "count=$LOC" >> "$GITHUB_OUTPUT"
           echo "Lines of code: $LOC"
 

@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import subprocess
-import sys
 
 from . import __version__
-from .history import load_last_command, save_last_command
+from .history import (
+    load_last_command,
+    load_last_interaction,
+    save_last_command,
+    save_last_interaction,
+)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -19,6 +23,7 @@ def _build_parser() -> argparse.ArgumentParser:
             '  sem <description>        Generate a command (e.g. sem "list large files")\n'
             "  sem -r <description>     Generate and execute the command\n"
             "  sem !                    Recall and execute the last generated command\n"
+            "  sem ?                    Show last request and generated command\n"
             "  sem config               Interactive configuration wizard\n"
             "  sem config show          Show current configuration\n"
             "  sem config set <k> [v]   Set a configuration value"
@@ -29,7 +34,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "description",
         nargs="*",
         metavar="description",
-        help='Semantic description, "!", or "config" subcommand.',
+        help='Semantic description, "!", "?", or "config" subcommand.',
     )
     parser.add_argument(
         "-r",
@@ -114,6 +119,15 @@ def main(argv: list[str] | None = None) -> None:
         print(f"$ {last}")
         raise SystemExit(_execute(last))
 
+    # --- Recall inspect mode: `sem ?` -----------------------------------------
+    if description == "?":
+        request, command = load_last_interaction()
+        if request is None or command is None:
+            raise SystemExit("Error: No previous request-command pair found.")
+        print(f"? {request}")
+        print(f"$ {command}")
+        raise SystemExit(0)
+
     # --- Normal mode: generate a command -------------------------------------
     from .ai import generate_command
     from .config import load_config
@@ -128,6 +142,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # Persist for later recall with `sem !`
     save_last_command(command)
+    save_last_interaction(description, command)
 
     # Optionally execute
     if args.run:

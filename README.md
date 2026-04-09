@@ -34,6 +34,7 @@ Requires Python 3.10+.
 sem <description>        # Generate a command
 sem -r <description>     # Generate and execute
 sem !                    # Re-run the last generated command
+sem ?                    # Show last request + generated command
 ```
 
 ### Examples
@@ -103,4 +104,3 @@ Environment variables take precedence over the config file:
 ## How it works
 
 `sem` sends your description to the configured AI model with a system prompt that instructs it to return exactly one shell command targeting your OS and shell. The command is displayed, saved to history for `sem !` recall, and optionally executed with `-r`.
-

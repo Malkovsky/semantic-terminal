@@ -1,0 +1,33 @@
+name: Update LOC badge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "semantic_terminal/**"
+      - "pyproject.toml"
+
+  workflow_dispatch:
+
+jobs:
+  loc-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Count lines of code
+        id: loc
+        run: |
+          LOC=$(find semantic_terminal -name '*.py' -exec cat {} + | grep -cve '^\s*$' -e '^\s*#')
+          echo "count=$LOC" >> "$GITHUB_OUTPUT"
+          echo "Lines of code: $LOC"
+
+      - name: Update Gist badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ vars.LOC_GIST_ID }}
+          filename: loc-badge.json
+          label: lines of code
+          message: ${{ steps.loc.outputs.count }}
+          color: brightgreen

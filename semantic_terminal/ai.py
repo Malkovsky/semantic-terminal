@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import platform
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
+from . import __version__
 from .config import Config
 
 _SYSTEM_PROMPT = """\
@@ -37,29 +41,59 @@ def generate_command(description: str, config: Config) -> str:
 
     Raises ``SystemExit`` on unrecoverable API errors.
     """
-    from openai import OpenAI
-
-    client = OpenAI(api_key=config.api_key, base_url=config.api_base)
-
     system = _SYSTEM_PROMPT.format(
         platform=platform.system(),
         shell=_detect_shell(),
     )
 
+    payload = {
+        "model": config.model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": description},
+        ],
+        "temperature": 0,
+        "max_tokens": 512,
+    }
+
+    endpoint = f"{config.api_base.rstrip('/')}/chat/completions"
+    request = Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {config.api_key}",
+            "User-Agent": f"semantic-terminal/{__version__}",
+        },
+        method="POST",
+    )
+
     try:
-        response = client.chat.completions.create(
-            model=config.model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": description},
-            ],
-            temperature=0,
-            max_tokens=512,
-        )
+        with urlopen(request, timeout=60) as response:
+            raw = response.read()
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace").strip()
+        detail = f"HTTP {exc.code}"
+        if body:
+            detail = f"{detail} — {body}"
+        raise SystemExit(f"Error: API request failed — {detail}") from exc
+    except URLError as exc:
+        raise SystemExit(f"Error: API request failed — {exc.reason}") from exc
     except Exception as exc:
         raise SystemExit(f"Error: API request failed — {exc}") from exc
 
-    content = (response.choices[0].message.content or "").strip()
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise SystemExit(f"Error: API request failed — Invalid JSON response ({exc})") from exc
+
+    content = (
+        data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        if isinstance(data, dict)
+        else ""
+    )
+    content = str(content or "").strip()
     if not content:
         raise SystemExit("Error: The AI returned an empty response.")
 

@@ -4,13 +4,37 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "semantic-terminal"
-version = "1.0.0"
+version = "1.0.1"
 description = "Convert natural language descriptions into terminal commands using AI"
 license = "MIT"
+readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    { name = "Malkovsky" },
+]
+keywords = ["cli", "terminal", "ai", "natural-language", "shell", "command-line"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Shells",
+    "Topic :: Utilities",
+]
 dependencies = [
     "openai>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Malkovsky/semantic-terminal"
+Repository = "https://github.com/Malkovsky/semantic-terminal"
+Issues = "https://github.com/Malkovsky/semantic-terminal/issues"
 
 [project.scripts]
 sem = "semantic_terminal.cli:main"

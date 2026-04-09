@@ -2,7 +2,7 @@ name: Update LOC badge
 
 on:
   push:
-    branches: [main]
+    branches: [main, test/workflow]
     paths:
       - "semantic_terminal/**"
       - "pyproject.toml"

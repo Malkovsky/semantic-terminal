@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import platform
-import shutil
-
-from openai import OpenAI
 
 from .config import Config
 
@@ -40,6 +37,8 @@ def generate_command(description: str, config: Config) -> str:
 
     Raises ``SystemExit`` on unrecoverable API errors.
     """
+    from openai import OpenAI
+
     client = OpenAI(api_key=config.api_key, base_url=config.api_base)
 
     system = _SYSTEM_PROMPT.format(

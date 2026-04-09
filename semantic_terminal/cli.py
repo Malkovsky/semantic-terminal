@@ -7,9 +7,6 @@ import subprocess
 import sys
 
 from . import __version__
-from .ai import generate_command
-from .config import load_config
-from .configure import run_set, run_show, run_wizard
 from .history import load_last_command, save_last_command
 
 
@@ -42,12 +39,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Execute the generated command after displaying it.",
     )
     parser.add_argument(
-        "-m",
-        "--model",
-        default=None,
-        help="Override the AI model (e.g. gpt-4o, gpt-3.5-turbo).",
-    )
-    parser.add_argument(
         "-v",
         "--version",
         action="version",
@@ -67,6 +58,8 @@ def _handle_config(tokens: list[str]) -> None:
 
     Exits the process when done.
     """
+    from .configure import run_set, run_show, run_wizard
+
     # sem config  (no subcommand) → interactive wizard
     if not tokens:
         run_wizard()
@@ -122,7 +115,10 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(_execute(last))
 
     # --- Normal mode: generate a command -------------------------------------
-    config = load_config(model_override=args.model)
+    from .ai import generate_command
+    from .config import load_config
+
+    config = load_config()
     config.validate()
 
     command = generate_command(description, config)

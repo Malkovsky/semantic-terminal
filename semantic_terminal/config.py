@@ -30,7 +30,7 @@ class Config:
             raise SystemExit(
                 "Error: No API key configured.\n"
                 "Run `sem config` to set up your configuration,\n"
-                "or set the SEM_API_KEY (or GROQ_API_KEY) environment variable.\n"
+                "or set the SEM_API_KEY environment variable.\n"
                 "\n"
                 "Get a free API key at: https://console.groq.com"
             )
@@ -105,22 +105,18 @@ def save_config_file(data: dict) -> None:
     _set_file_permissions(CONFIG_FILE)
 
 
-def load_config(*, model_override: str | None = None) -> Config:
+def load_config() -> Config:
     """Build a Config by layering env vars over the config file.
 
     Priority (highest to lowest):
-      1. CLI flag overrides (model_override)
-      2. Environment variables (SEM_API_KEY, SEM_API_BASE, SEM_MODEL)
-      3. Fallback env vars (GROQ_API_KEY, OPENAI_API_KEY)
-      4. Config file (~/.config/semantic-terminal/config.json)
-      5. Built-in defaults
+      1. Environment variables (SEM_API_KEY, SEM_API_BASE, SEM_MODEL)
+      2. Config file (~/.config/semantic-terminal/config.json)
+      3. Built-in defaults
     """
     file_cfg = _load_config_file()
 
     api_key = (
         os.environ.get("SEM_API_KEY")
-        or os.environ.get("GROQ_API_KEY")
-        or os.environ.get("OPENAI_API_KEY")
         or file_cfg.get("api_key", "")
     )
 
@@ -131,8 +127,7 @@ def load_config(*, model_override: str | None = None) -> Config:
     )
 
     model = (
-        model_override
-        or os.environ.get("SEM_MODEL")
+        os.environ.get("SEM_MODEL")
         or file_cfg.get("model", "")
         or DEFAULT_MODEL
     )
@@ -151,10 +146,6 @@ def get_config_sources() -> dict[str, str]:
     # api_key
     if os.environ.get("SEM_API_KEY"):
         sources["api_key"] = "SEM_API_KEY env var"
-    elif os.environ.get("GROQ_API_KEY"):
-        sources["api_key"] = "GROQ_API_KEY env var"
-    elif os.environ.get("OPENAI_API_KEY"):
-        sources["api_key"] = "OPENAI_API_KEY env var"
     elif file_cfg.get("api_key"):
         sources["api_key"] = "config file"
     else:

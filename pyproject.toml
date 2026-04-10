@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "semantic-terminal"
-version = "1.0.1"
+version = "1.2.0"
 description = "Convert natural language descriptions into terminal commands using AI"
 license = "MIT"
 readme = "README.md"
@@ -36,6 +36,10 @@ Issues = "https://github.com/Malkovsky/semantic-terminal/issues"
 
 [project.scripts]
 sem = "semantic_terminal.cli:main"
+sem-setup = "semantic_terminal.wrapper_setup:main"
 
 [tool.setuptools.packages.find]
 include = ["semantic_terminal*"]
+
+[tool.setuptools.package-data]
+semantic_terminal = ["assets/*.sh", "assets/*.ps1"]

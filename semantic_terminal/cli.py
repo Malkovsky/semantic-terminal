@@ -22,6 +22,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "commands:\n"
             '  sem <description>        Generate a command (e.g. sem "list large files")\n'
             "  sem -r <description>     Generate and execute the command\n"
+            "  sem -r                   Execute the last generated command\n"
             "  sem !                    Recall and execute the last generated command\n"
             "  sem ?                    Show last request and generated command\n"
             "  sem config               Interactive configuration wizard\n"
@@ -34,17 +35,24 @@ def _build_parser() -> argparse.ArgumentParser:
         "description",
         nargs="*",
         metavar="description",
-        help='Semantic description, "!", "?", or "config" subcommand.',
+        help='Semantic description, "!", "?", or "config" subcommand. Optional with -r.',
     )
     parser.add_argument(
         "-r",
         "--run",
         action="store_true",
         default=False,
-        help="Execute the generated command after displaying it.",
+        help="Execute generated command, or last command when no description is provided.",
     )
     parser.add_argument(
         "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Show a detailed breakdown and print raw command on the last line.",
+    )
+    parser.add_argument(
+        "-V",
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -56,6 +64,15 @@ def _execute(command: str) -> int:
     """Run *command* in the user's shell and return the exit code."""
     result = subprocess.run(command, shell=True)
     return result.returncode
+
+
+def _run_last_command() -> None:
+    """Print and execute the most recently generated command."""
+    last = load_last_command()
+    if last is None:
+        raise SystemExit("Error: No previous command found.")
+    print(f"$ {last}")
+    raise SystemExit(_execute(last))
 
 
 def _handle_config(tokens: list[str]) -> None:
@@ -103,6 +120,9 @@ def main(argv: list[str] | None = None) -> None:
     tokens = args.description if args.description else []
     description = " ".join(tokens).strip()
 
+    if args.run and not description:
+        _run_last_command()
+
     if not description:
         parser.print_help()
         raise SystemExit(0)
@@ -113,11 +133,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # --- Recall mode: `sem !` ------------------------------------------------
     if description == "!":
-        last = load_last_command()
-        if last is None:
-            raise SystemExit("Error: No previous command found.")
-        print(f"$ {last}")
-        raise SystemExit(_execute(last))
+        _run_last_command()
 
     # --- Recall inspect mode: `sem ?` -----------------------------------------
     if description == "?":
@@ -129,16 +145,19 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(0)
 
     # --- Normal mode: generate a command -------------------------------------
-    from .ai import generate_command
+    from .ai import generate_command, generate_verbose_command
     from .config import load_config
 
     config = load_config()
     config.validate()
 
-    command = generate_command(description, config)
-
-    # Display the command
-    print(f"$ {command}")
+    if args.verbose:
+        details, command = generate_verbose_command(description, config)
+        print(details.rstrip())
+        print(command)
+    else:
+        command = generate_command(description, config)
+        print(f"$ {command}")
 
     # Persist for later recall with `sem !`
     save_last_command(command)

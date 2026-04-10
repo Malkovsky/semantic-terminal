@@ -26,6 +26,30 @@ Rules:
   pipes as appropriate.
 """
 
+_EXPLAIN_SYSTEM_PROMPT = """\
+You are a command-line assistant. The user will describe what they want to do \
+in natural language and you must provide both a short explanation and a shell \
+command.
+
+Rules:
+- Target the user's environment: {platform} ({shell}).
+- Keep the explanation in the same natural language as the user's request.
+- The explanation must be short and readable: one heading + 3-5 bullet points.
+- Cover what the command does, key flags/options/pipes, and caveats/assumptions.
+- Return EXACTLY in this machine-readable format:
+  <<SEM_EXPLANATION>>
+  <explanation block>
+  <<SEM_COMMAND>>
+  <one shell command only>
+- Do NOT use markdown code fences.
+- Do NOT include any extra sections or text outside the format above.
+- Never produce destructive commands (rm -rf /, format, etc.) unless the user \
+  explicitly describes destructive intent.
+- If the request is ambiguous, pick the safest reasonable interpretation.
+- If the task genuinely cannot be done in a single command, chain with && or \
+  pipes as appropriate.
+"""
+
 
 def _detect_shell() -> str:
     """Best-effort detection of the current shell."""
@@ -36,24 +60,19 @@ def _detect_shell() -> str:
     return shell.rsplit("/", 1)[-1].rsplit("\\", 1)[-1] or "unknown"
 
 
-def generate_command(description: str, config: Config) -> str:
-    """Call the AI and return the generated command string.
-
-    Raises ``SystemExit`` on unrecoverable API errors.
-    """
-    system = _SYSTEM_PROMPT.format(
-        platform=platform.system(),
-        shell=_detect_shell(),
-    )
-
+def _post_chat_completion(
+    *,
+    config: Config,
+    messages: list[dict[str, str]],
+    temperature: float = 0,
+    max_tokens: int = 512,
+) -> str:
+    """Call OpenAI-compatible chat completion endpoint and return message text."""
     payload = {
         "model": config.model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": description},
-        ],
-        "temperature": 0,
-        "max_tokens": 512,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
     }
 
     endpoint = f"{config.api_base.rstrip('/')}/chat/completions"
@@ -97,6 +116,29 @@ def generate_command(description: str, config: Config) -> str:
     if not content:
         raise SystemExit("Error: The AI returned an empty response.")
 
+    return content
+
+
+def generate_command(description: str, config: Config) -> str:
+    """Call the AI and return the generated command string.
+
+    Raises ``SystemExit`` on unrecoverable API errors.
+    """
+    system = _SYSTEM_PROMPT.format(
+        platform=platform.system(),
+        shell=_detect_shell(),
+    )
+
+    content = _post_chat_completion(
+        config=config,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": description},
+        ],
+        temperature=0,
+        max_tokens=512,
+    )
+
     # Strip markdown code fences if the model ignores instructions
     if content.startswith("```"):
         lines = content.splitlines()
@@ -105,3 +147,67 @@ def generate_command(description: str, config: Config) -> str:
         content = "\n".join(lines).strip()
 
     return content
+
+
+def _parse_verbose_response(content: str) -> tuple[str, str]:
+    """Parse verbose response into ``(explanation, command)``."""
+    marker_expl = "<<SEM_EXPLANATION>>"
+    marker_cmd = "<<SEM_COMMAND>>"
+
+    idx_expl = content.find(marker_expl)
+    idx_cmd = content.find(marker_cmd)
+
+    if idx_expl != -1 and idx_cmd != -1 and idx_cmd > idx_expl:
+        explanation = content[idx_expl + len(marker_expl):idx_cmd].strip()
+        command_block = content[idx_cmd + len(marker_cmd):].strip()
+    else:
+        lines = [line for line in content.splitlines() if line.strip()]
+        if len(lines) < 2:
+            raise SystemExit("Error: The AI returned an invalid verbose response.")
+        explanation = "\n".join(lines[:-1]).strip()
+        command_block = lines[-1].strip()
+
+    if command_block.startswith("```"):
+        lines = [line for line in command_block.splitlines() if not line.startswith("```")]
+        command_block = "\n".join(lines).strip()
+
+    command_lines = [line.strip() for line in command_block.splitlines() if line.strip()]
+    if not command_lines:
+        raise SystemExit("Error: The AI returned an invalid verbose response.")
+
+    command = command_lines[0]
+    if command.startswith("$ "):
+        command = command[2:].strip()
+
+    if not explanation or not command:
+        raise SystemExit("Error: The AI returned an invalid verbose response.")
+
+    return explanation, command
+
+
+def generate_verbose_command(description: str, config: Config) -> tuple[str, str]:
+    """Generate ``(explanation, command)`` in one API request."""
+    system = _EXPLAIN_SYSTEM_PROMPT.format(
+        platform=platform.system(),
+        shell=_detect_shell(),
+    )
+
+    content = _post_chat_completion(
+        config=config,
+        messages=[
+            {"role": "system", "content": system},
+            {
+                "role": "user",
+                "content": description,
+            },
+        ],
+        temperature=0,
+        max_tokens=768,
+    )
+
+    if content.startswith("```"):
+        lines = content.splitlines()
+        lines = [l for l in lines if not l.startswith("```")]
+        content = "\n".join(lines).strip()
+
+    return _parse_verbose_response(content)

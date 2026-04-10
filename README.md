@@ -4,7 +4,9 @@
 [![Lines of Code](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Malkovsky/ccbd74061fc9ce8bee110c2479f5c23c/raw/loc-badge.json)](https://github.com/Malkovsky/semantic-terminal)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-A single-purpose command-line tool in the Unix tradition: it does one thing and does it well. `sem` translates natural language into shell commands using AI. Only Python core functionality is used, no additional dependencies.
+A single-purpose command-line tool in the Unix tradition: it does one thing and does it well. `sem` translates natural language into shell commands using AI. Only Python core functionality is used, no additional dependencies or fancy spinners.
+
+![Semantic terminal preview](demo.gif)
 
 ## Install
 
